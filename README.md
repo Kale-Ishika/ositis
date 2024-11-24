@@ -1,4 +1,3 @@
-# ositis
 -----------------------------------
 //matrix multiplication random ip generation 
 #include <stdio.h>
@@ -1229,4 +1228,352 @@ int main() {
 
     return 0;
 }
-----------------------------------------
+-----------------------------------
+//disc scheduling(SSTF/SCAN/CSCAN)
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 100
+
+int abs_diff(int a, int b) {
+    return abs(a - b);
+}
+
+//SSTF fucntion
+void SSTF(int requests[], int n, int head) {
+    int completed[MAX] = {0}; 
+    int total_seek = 0;
+    int current_position = head;
+
+    printf("\nSSTF Disk Scheduling:\n");
+    printf("Seek Sequence: %d", current_position);
+
+    for (int i = 0; i < n; i++) {
+        int min_seek = MAX;
+        int closest_request = -1;
+
+        //closest unserved request
+        for (int j = 0; j < n; j++) {
+            if (!completed[j] && abs_diff(current_position, requests[j]) < min_seek) {
+                min_seek = abs_diff(current_position, requests[j]);
+                closest_request = j;
+            }
+        }
+
+        total_seek += min_seek;
+        current_position = requests[closest_request];
+        completed[closest_request] = 1; 
+        printf(" -> %d", current_position);
+    }
+
+    printf("\nTotal seek time: %d\n", total_seek);
+}
+
+// SCAN (Elevator) funtion
+void SCAN(int requests[], int n, int head, int disk_size, int direction) {
+    int total_seek = 0;
+    int current_position = head;
+    
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (requests[i] > requests[j]) {
+                int temp = requests[i];
+                requests[i] = requests[j];
+                requests[j] = temp;
+            }
+        }
+    }
+
+    printf("\nSCAN Disk Scheduling:\n");
+    printf("Seek Sequence: %d", current_position);
+
+    if (direction == 1) { //move to larger requests
+        for (int i = 0; i < n; i++) {
+            if (requests[i] >= head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+        //move to end
+        total_seek += abs_diff(current_position, disk_size - 1);
+        printf(" -> %d", disk_size - 1);
+        current_position = disk_size - 1;
+
+        // back towards smaller request
+        for (int i = n - 1; i >= 0; i--) {
+            if (requests[i] < head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+    } else { //move to smaller request
+        for (int i = n - 1; i >= 0; i--) {
+            if (requests[i] <= head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+        // move to start 
+        total_seek += abs_diff(current_position, 0);
+        printf(" -> %d", 0);
+        current_position = 0;
+
+        // back towards karger requests
+        for (int i = 0; i < n; i++) {
+            if (requests[i] > head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+    }
+
+    printf("\nTotal seek time: %d\n", total_seek);
+}
+
+// C-LOOK function
+void CLOOK(int requests[], int n, int head, int direction) {
+    int total_seek = 0;
+    int current_position = head;
+    
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (requests[i] > requests[j]) {
+                int temp = requests[i];
+                requests[i] = requests[j];
+                requests[j] = temp;
+            }
+        }
+    }
+
+    printf("\nC-LOOK Disk Scheduling:\n");
+    printf("Seek Sequence: %d", current_position);
+
+    if (direction == 1) { // Move towards larger requests
+        for (int i = 0; i < n; i++) {
+            if (requests[i] >= head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+        // Jump to the smallest request
+        total_seek += abs_diff(current_position, requests[0]);
+        current_position = requests[0];
+        printf(" -> %d", requests[0]);
+
+        // Serve the remaining smaller requests
+        for (int i = 1; i < n; i++) {
+            if (requests[i] < head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+    } else { // Move towards smaller requests
+        for (int i = n - 1; i >= 0; i--) {
+            if (requests[i] <= head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+        // Jump to the largest request
+        total_seek += abs_diff(current_position, requests[n - 1]);
+        current_position = requests[n - 1];
+        printf(" -> %d", requests[n - 1]);
+
+        // Serve the remaining larger requests
+        for (int i = n - 2; i >= 0; i--) {
+            if (requests[i] > head) {
+                printf(" -> %d", requests[i]);
+                total_seek += abs_diff(current_position, requests[i]);
+                current_position = requests[i];
+            }
+        }
+    }
+
+    printf("\nTotal seek time: %d\n", total_seek);
+}
+
+int main() {
+    int n, head, disk_size, direction;
+    int requests[MAX];
+
+    // Input
+    printf("Number of requests: ");
+    scanf("%d", &n);
+
+    printf("Enter requests:\n");
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &requests[i]);
+    }
+
+    printf("Head: ");
+    scanf("%d", &head);
+
+    printf("Disk size: ");
+    scanf("%d", &disk_size);
+
+    printf("Direction(1-right/0-left): ");
+    scanf("%d", &direction);
+    
+    SSTF(requests, n, head);
+    SCAN(requests, n, head, disk_size, direction);
+    CLOOK(requests, n, head, direction);
+
+    return 0;
+}
+--------------------------------------
+//Page replacement (FIFO/LRU/OPTIMAL)
+#include <stdio.h>
+#include <stdbool.h>
+
+// FIFO Page Replacement Algorithm
+int fifo_page_faults(int reference_string[], int n, int frame_size) {
+    int page_table[frame_size];
+    int page_faults = 0;
+    int front = 0;
+
+    for (int i = 0; i < frame_size; i++) {
+        page_table[i] = -1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        bool page_found = false;
+        int page = reference_string[i];
+
+        for (int j = 0; j < frame_size; j++) {
+            if (page_table[j] == page) {
+                page_found = true;
+                break;
+            }
+        }
+
+        if (!page_found) {
+            page_table[front] = page;
+            front = (front + 1) % frame_size;
+            page_faults++;
+        }
+    }
+
+    return page_faults;
+}
+
+// LRU Page Replacement Algorithm
+int lru_page_faults(int reference_string[], int n, int frame_size) {
+    int page_table[frame_size];
+    int page_faults = 0;
+
+    for (int i = 0; i < frame_size; i++) {
+        page_table[i] = -1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        bool page_found = false;
+        int page = reference_string[i];
+
+        for (int j = 0; j < frame_size; j++) {
+            if (page_table[j] == page) {
+                page_found = true;
+                // Move the accessed page to the end of the table (most recently used)
+                for (int k = j; k < frame_size - 1; k++) {
+                    page_table[k] = page_table[k + 1];
+                }
+                page_table[frame_size - 1] = page;
+                break;
+            }
+        }
+
+        if (!page_found) {
+            // If a page fault occurs, replace the first page (least recently used)
+            for (int j = 0; j < frame_size - 1; j++) {
+                page_table[j] = page_table[j + 1];
+            }
+            page_table[frame_size - 1] = page;
+            page_faults++;
+        }
+    }
+
+    return page_faults;
+}
+
+// Optimal Page Replacement Algorithm
+int optimal_page_faults(int reference_string[], int n, int frame_size) {
+    int page_table[frame_size];
+    int page_faults = 0;
+
+    for (int i = 0; i < frame_size; i++) {
+        page_table[i] = -1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        bool page_found = false;
+        int page = reference_string[i];
+
+        for (int j = 0; j < frame_size; j++) {
+            if (page_table[j] == page) {
+                page_found = true;
+                break;
+            }
+        }
+
+        if (!page_found) {
+            int replace_index = -1;
+            int furthest_used = -1;
+
+            for (int j = 0; j < frame_size; j++) {
+                int page_in_memory = page_table[j];
+                int next_use = n;  // Default to the last occurrence
+
+                for (int k = i + 1; k < n; k++) {
+                    if (reference_string[k] == page_in_memory) {
+                        next_use = k;
+                        break;
+                    }
+                }
+
+                if (next_use > furthest_used) {
+                    furthest_used = next_use;
+                    replace_index = j;
+                }
+            }
+
+            page_table[replace_index] = page;
+            page_faults++;
+        }
+    }
+
+    return page_faults;
+}
+
+int main() {
+    int n, frame_size;
+    
+    printf("Enter the number of pages: ");
+    scanf("%d", &n);
+    
+    int reference_string[n];
+    
+    printf("Enter the reference string:\n");
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &reference_string[i]);
+    }
+    
+    printf("Enter the frame size: ");
+    scanf("%d", &frame_size);
+
+    int fifo_faults = fifo_page_faults(reference_string, n, frame_size);
+    int lru_faults = lru_page_faults(reference_string, n, frame_size);
+    int optimal_faults = optimal_page_faults(reference_string, n, frame_size);
+
+    printf("FIFO Page Faults: %d\n", fifo_faults);
+    printf("LRU Page Faults: %d\n", lru_faults);
+    printf("Optimal Page Faults: %d\n", optimal_faults);
+
+    return 0;
+}
+--------------------------------------
